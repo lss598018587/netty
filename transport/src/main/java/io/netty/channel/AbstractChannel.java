@@ -329,7 +329,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     /**
-     * Create a new {@link AbstractUnsafe} instance which will be used for the life-time of the {@link Channel}
+     * Create a new {@link AbstractUnsafe} instance（实例） which will be used for the life-time of the {@link Channel}
      */
     protected abstract AbstractUnsafe newUnsafe();
 
@@ -465,6 +465,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             AbstractChannel.this.eventLoop = eventLoop;
 
+            //为什么要做这样的if else的判断
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {

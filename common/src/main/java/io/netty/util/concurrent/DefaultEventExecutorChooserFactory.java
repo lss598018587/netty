@@ -51,6 +51,10 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
             this.executors = executors;
         }
 
+        /**
+         * 2的倍数用这个位，取值会更好
+         * @return
+         */
         @Override
         public EventExecutor next() {
             return executors[idx.getAndIncrement() & executors.length - 1];

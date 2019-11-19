@@ -24,8 +24,8 @@ import io.netty.util.concurrent.GenericFutureListener;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * The default {@link ChannelPromise} implementation.  It is recommended to use {@link Channel#newPromise()} to create
- * a new {@link ChannelPromise} rather than calling the constructor explicitly.
+ * The default {@link ChannelPromise} implementation.  It is recommended（推荐） to use {@link Channel#newPromise()} to create
+ * a new {@link ChannelPromise} rather than calling（调用） the constructor explicitly.
  */
 public class DefaultChannelPromise extends DefaultPromise<Void> implements ChannelPromise, FlushCheckpoint {
 
