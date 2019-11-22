@@ -176,11 +176,16 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private SelectorTuple openSelector() {
         final Selector unwrappedSelector;
         try {
+            // Selector selector = Selector.open();
+            // public static Selector open() throws IOException {
+            //        return SelectorProvider.provider().openSelector();
+            //    }
             unwrappedSelector = provider.openSelector();
         } catch (IOException e) {
             throw new ChannelException("failed to open a new selector", e);
         }
 
+        //不需要优化，返回原生的selector
         if (DISABLE_KEY_SET_OPTIMIZATION) {
             return new SelectorTuple(unwrappedSelector);
         }
@@ -792,7 +797,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         Selector selector = this.selector;
         try {
             int selectCnt = 0;
+            //当前时间
             long currentTimeNanos = System.nanoTime();
+            //当前时间+截止时间 = 当前任务可以运行到哪个时间之前
+            // delayNanos(currentTimeNanos); 计算第一个任务的截止时间
             long selectDeadLineNanos = currentTimeNanos + delayNanos(currentTimeNanos);
 
             long normalizedDeadlineNanos = selectDeadLineNanos - initialNanoTime();
@@ -820,9 +828,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     break;
                 }
 
+                //截止时间未到，任务队列为空，则进行阻塞
                 int selectedKeys = selector.select(timeoutMillis);
                 selectCnt ++;
 
+                //1.轮询到事件
+                //2.select操作是否需要唤醒
+                //3.异步队列已经有任务
+                //4.当前定时队列是否有任务
                 if (selectedKeys != 0 || oldWakenUp || wakenUp.get() || hasTasks() || hasScheduledTasks()) {
                     // - Selected something,
                     // - waken up by user, or

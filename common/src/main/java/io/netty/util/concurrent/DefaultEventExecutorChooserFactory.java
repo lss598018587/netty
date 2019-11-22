@@ -32,6 +32,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
     @SuppressWarnings("unchecked")
     @Override
     public EventExecutorChooser newChooser(EventExecutor[] executors) {
+        //isPowerOfTwo() 判断是否是2的幂，如2、4、8、16
         if (isPowerOfTwo(executors.length)) {
             return new PowerOfTwoEventExecutorChooser(executors);
         } else {
@@ -57,6 +58,10 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
          */
         @Override
         public EventExecutor next() {
+
+            // index++ & (length -1 )
+            // 类似于 1.2.3.4.5.6 % 8 ,就是余数
+            // 类似于 1.2.3.4.5.6 % 4 ,就是余数
             return executors[idx.getAndIncrement() & executors.length - 1];
         }
     }

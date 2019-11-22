@@ -1,0 +1,61 @@
+
+NioEventLoop启动
+
+bind() ---> execute(task)【入口】
+    startThread() --> doStartThread()【创建线程】
+        ThreadPerTaskExecutor.execute()
+            thread = Thread.currentThread()
+            NioEventLoop.run() 【启动】
+
+
+NioEventLoop执行
+    SingleThreadEventExecutor.this.run();
+
+    run() -> for(;;)
+        select()【检查是否有io事件】
+        processSelectedKeys()【处理io事件】
+        runAllTasks()【处理异步任务队列】
+
+
+
+select()  方法执行逻辑
+
+        * deadline 以及任务穿插逻辑处理
+
+        * 阻塞式select
+
+        * 避免jdk空轮询的bug
+
+
+ runAllTasks()执行逻辑
+
+    * task的分类和添加
+
+    * 任务的聚合
+
+    * 任务的执行
+
+
+ 创建NioSocketChannel
+
+ new NioSocketChannel(parent,ch)【入口】
+
+    AbstractNioByteChannel(p,ch,op_read)
+
+        configureBlocking(false) & save op
+
+        create id,unsafe,pipeline
+
+    new NioSocketChannelConfig()
+
+        setTcpNoDelay(true) 禁止Nagle算法：小数据集合成大数据包发送出去
+
+
+
+  ServerBootstrapAcceptor
+
+        * 添加 childHandler
+
+        * 设置 options 和 attrs
+
+        * 选择NioEventLoop 并注册selector
