@@ -47,9 +47,16 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             new CancellationException(), DefaultPromise.class, "cancel(...)"));
     private static final StackTraceElement[] CANCELLATION_STACK = CANCELLATION_CAUSE_HOLDER.cause.getStackTrace();
 
+    // 保存执行结果
     private volatile Object result;
+
+    // 执行任务的线程池，promise 持有 executor 的引用，这个其实有点奇怪了
+    // 因为“任务”其实没必要知道自己在哪里被执行的
     private final EventExecutor executor;
     /**
+     *
+     * 监听者，回调函数，任务结束后（正常或异常结束）执行
+     *
      * One or more listeners. Can be a {@link GenericFutureListener} or a {@link DefaultFutureListeners}.
      * If {@code null}, it means either 1) no listeners were added yet or 2) all listeners were notified.
      *
@@ -57,11 +64,17 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      */
     private Object listeners;
     /**
+     *
+     * 等待这个 promise 的线程数(调用sync()/await()进行等待的线程数量)
+     *
      * Threading - synchronized(this). We are required to hold the monitor to use Java's underlying wait()/notifyAll().
      */
     private short waiters;
 
     /**
+     *
+     * 是否正在唤醒等待线程，用于防止重复执行唤醒，不然会重复执行 listeners 的回调方法
+     *
      * Threading - synchronized(this). We must prevent concurrent notification and FIFO listener notification if the
      * executor changes.
      */
@@ -235,22 +248,26 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Promise<V> await() throws InterruptedException {
+        // 判断Future任务是否结束，内部根据result是否为null判断，setSuccess或setFailure时会通过CAS修改result
         if (isDone()) {
             return this;
         }
-
+        // 线程是否被中断
         if (Thread.interrupted()) {
             throw new InterruptedException(toString());
         }
-
+        // 检查当前线程是否与线程池运行的线程是一个
         checkDeadLock();
 
         synchronized (this) {
             while (!isDone()) {
+                // waiters计数加1
                 incWaiters();
                 try {
+                    // Object的方法，让出cpu，加入等待队列
                     wait();
                 } finally {
+                    //  waiters计数减1
                     decWaiters();
                 }
             }
@@ -479,8 +496,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         notifyListenerWithStackOverFlowProtection(eventExecutor, future, listener);
     }
 
+    //通知监听器
     private void notifyListeners() {
+        //获取当前任务的的执行器
         EventExecutor executor = executor();
+        //如果调用这个方法的线程就是执行器的线程则进入该if
         if (executor.inEventLoop()) {
             final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
             final int stackDepth = threadLocals.futureListenerStackDepth();
@@ -534,33 +554,43 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private void notifyListenersNow() {
+        //创建了方法内部的局部变量
         Object listeners;
+        //使用this作为线程锁，并且上锁
         synchronized (this) {
-            // Only proceed if there are listeners to notify and we are not already notifying listeners.
+            // 如果当前任务并没有通知并且是有监听器的则进行接下来的逻辑，否则return。
             if (notifyingListeners || this.listeners == null) {
                 return;
             }
+            //通知只能通知一次既然当前线程已经到这里了那么接下来的线程就在上一个if停止就是了(当然代表当前线程已经释放了这个this锁)，因为这里设置了通知状态为true，代表正在通知
             notifyingListeners = true;
+            //并且将当前内部属性赋值给刚才的局部变量
             listeners = this.listeners;
+            //然后将内部属性设置为null，因为正在通知状态如果通知完成将会修改回来所以这里置为null则为了保证第二个条件成立
             this.listeners = null;
         }
         for (;;) {
+            //这里对监听器做了两个处理第一个是当前监听器是一个列表代表多个监听器第二个则代表当前监听器是一个监听器，不一样的数据结构对应不一样的处理。
             if (listeners instanceof DefaultFutureListeners) {
                 notifyListeners0((DefaultFutureListeners) listeners);
             } else {
                 notifyListener0(this, (GenericFutureListener<?>) listeners);
             }
+            //通知完成后继续上锁
             synchronized (this) {
+                //如果当前的监听器已经重置为null则设置正在通知的状态结束，否则设置当前的局部变量为当前的监听器然后设置当前监听器为null
                 if (this.listeners == null) {
                     // Nothing can throw from within this method, so setting notifyingListeners back to false does not
                     // need to be in a finally block.
                     notifyingListeners = false;
                     return;
                 }
+                //可能会在通知的时候又有新的监听器进来所以这里再次设置了
                 listeners = this.listeners;
                 this.listeners = null;
             }
         }
+        //这里对此方法进行一个小结: 这里使用了两个地方用锁而且他们的锁是一样的所以会出现竞争问题，如果第一个线程进来并且设置为正在发送通知那么剩下的线程都不会再继续执行并且当前的监听器是null的 如果通过别的途径再次添加了监听器并且当前的通知还是正在通知的状态那么其他的线程还是进不来，但是当前的线程执行完通知会发现当前的监听器又发生了变化，那么这个for的死循环再次执行，因为发现又有新的通知所以当前还是正在发送通知状态，所以其他线程还是进不来，最终还是由当前线程进行执行。而在讲述notifyListenerWithStackOverFlowProtection的时候说过监听器发生改变所以不能复用的问题，而这里就处理如果当前的监听器发送改变的处理。
     }
 
     private void notifyListeners0(DefaultFutureListeners listeners) {
@@ -676,8 +706,13 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     }
                     incWaiters();
                     try {
+                        //使用wait进行等待,因为wait传入参数是毫秒而这里是纳秒所以这里做了处理
+                        //1、获取纳秒数中的毫秒传入第一个参数
+                        //2、获取剩余的那纳秒数作为第二个参数
+                        //wait 第一个参数是毫秒数 第二个参数是纳秒数，看起来比较精准其实jdk只是发现有纳秒数后对毫秒数进行了+1 具体读者可以去看wait源码
                         wait(waitTime / 1000000, (int) (waitTime % 1000000));
                     } catch (InterruptedException e) {
+                        //如果出现中断异常那么判断传入的第二个参数是否抛出异常如果为true此处则抛出异常否则修改前面声明的变量为true
                         if (interruptable) {
                             throw e;
                         } else {
@@ -690,6 +725,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 if (isDone()) {
                     return true;
                 } else {
+                    //否则判断当前睡眠时间是否超过设置时间如果超过则返回当前的执行结果，否则继续循环
                     waitTime = timeoutNanos - (System.nanoTime() - startTime);
                     if (waitTime <= 0) {
                         return isDone();

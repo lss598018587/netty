@@ -35,6 +35,8 @@ public final class RejectedExecutionHandlers {
     private RejectedExecutionHandlers() { }
 
     /**
+     * Netty 选择的默认拒绝策略是：抛出异常
+     *
      * Returns a {@link RejectedExecutionHandler} that will always just throw a {@link RejectedExecutionException}.
      */
     public static RejectedExecutionHandler reject() {

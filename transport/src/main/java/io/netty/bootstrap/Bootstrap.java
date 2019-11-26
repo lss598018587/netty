@@ -137,6 +137,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      */
     public ChannelFuture connect(SocketAddress remoteAddress) {
         ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
+        // validate 只是校验一下各个参数是不是正确设置了
         validate();
         return doResolveAndConnect(remoteAddress, config.localAddress());
     }

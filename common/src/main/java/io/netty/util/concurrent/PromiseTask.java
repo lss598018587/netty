@@ -104,6 +104,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
         try {
             if (setUncancellableInternal()) {
                 V result = runTask();
+                //把任务状态更新完成为true
                 setSuccessInternal(result);
             }
         } catch (Throwable e) {

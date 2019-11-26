@@ -295,6 +295,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {
+            //通过 ReflectiveChannelFactory 反射 出channel
+            // 1. 构造 channel 实例，同时会构造 pipeline 实例，
+            // 现在 pipeline 中有 head 和 tail 两个 handler 了
             channel = channelFactory.newChannel();
             init(channel);
         } catch (Throwable t) {
@@ -308,6 +311,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
 
+        // config().group() = NioEventLoopGroup -->  MultithreadEventLoopGroup --> register()
         ChannelFuture regFuture = config().group().register(channel);
         if (regFuture.cause() != null) {
             if (channel.isRegistered()) {

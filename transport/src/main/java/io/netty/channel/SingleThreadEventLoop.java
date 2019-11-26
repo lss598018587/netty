@@ -63,6 +63,8 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
                                     boolean addTaskWakesUp, Queue<Runnable> taskQueue, Queue<Runnable> tailTaskQueue,
                                     RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, executor, addTaskWakesUp, taskQueue, rejectedExecutionHandler);
+
+        // 我们可以直接忽略这个东西，以后我们也不会再介绍它
         tailTasks = ObjectUtil.checkNotNull(tailTaskQueue, "tailTaskQueue");
     }
 
@@ -84,6 +86,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     @Override
     public ChannelFuture register(final ChannelPromise promise) {
         ObjectUtil.checkNotNull(promise, "promise");
+        // promise 关联了 channel，channel 持有 Unsafe 实例，register 操作就封装在 Unsafe 中
         promise.channel().unsafe().register(this, promise);
         return promise;
     }

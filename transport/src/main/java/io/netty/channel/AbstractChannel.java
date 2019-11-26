@@ -462,14 +462,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName()));
                 return;
             }
-
+            // 将这个 eventLoop 实例设置给这个 channel，从此这个 channel 就是有 eventLoop 的了
+            // 我觉得这一步其实挺关键的，因为后续该 channel 中的所有异步操作，都要提交给这个 eventLoop 来执行
             AbstractChannel.this.eventLoop = eventLoop;
 
-            //为什么要做这样的if else的判断
+            // 如果发起 register 动作的线程就是 eventLoop 实例中的线程，那么直接调用 register0(promise)
+            // 对于我们来说，它不会进入到这个分支，
+            //     之所以有这个分支，是因为我们是可以 unregister，然后再 register 的，后面再仔细看
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {
                 try {
+                    // 否则，提交任务给 eventLoop，eventLoop 中的线程会负责调用 register0(promise)
                     eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {

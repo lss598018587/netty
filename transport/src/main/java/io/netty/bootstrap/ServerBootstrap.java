@@ -126,6 +126,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         setChannelOptions(channel, options0().entrySet().toArray(newOptionArray(0)), logger);
         setAttributes(channel, attrs0().entrySet().toArray(newAttrArray(0)));
 
+        // 拿到刚刚创建的 channel 内部的 pipeline 实例
         ChannelPipeline p = channel.pipeline();
 
         final EventLoopGroup currentChildGroup = childGroup;
@@ -134,10 +135,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 childOptions.entrySet().toArray(newOptionArray(0));
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(0));
 
+        // 开始往 pipeline 中添加一个 handler，这个 handler 是 ChannelInitializer 的实例
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(final Channel ch) {
                 final ChannelPipeline pipeline = ch.pipeline();
+                // 获取bossGroup的handler
                 ChannelHandler handler = config.handler();
                 if (handler != null) {
                     pipeline.addLast(handler);
@@ -146,6 +149,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
+                        // 添加一个 handler 到 pipeline 中：ServerBootstrapAcceptor
+                        // 从名字可以看到，这个 handler 的目的是用于接收客户端请求
                         pipeline.addLast(new ServerBootstrapAcceptor(
                                 ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
                     }

@@ -49,6 +49,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
      * @see MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, Executor, Object...)
      */
     protected MultithreadEventLoopGroup(int nThreads, Executor executor, Object... args) {
+        // 默认地 nThreads 会被设置为 CPU 核心数 *2
         super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, executor, args);
     }
 
@@ -83,6 +84,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
 
     @Override
     public ChannelFuture register(Channel channel) {
+        //next() 方法很简单，就是选择线程池中的一个线程（还记得 chooserFactory 吗），也就是选择一个 NioEventLoop 实例
         return next().register(channel);
     }
 

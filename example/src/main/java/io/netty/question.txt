@@ -28,3 +28,16 @@ new NioEventLoopGroup()【线程组，默认2*cpu】
 4.Netty是在哪里检测有新连接接入的
 
 5.新连接是怎么注册到NioEventLoop线程的
+
+
+
+6.Netty是如何判断ChannelHandler类型的
+
+通过instanceOf 去判断
+
+7.对于Channelhandler的添加应该遵循什么样的顺序
+
+inbond顺序传播跟添加 channelHandler的顺序正相关
+outBond顺序传播跟添加channelHandler的书序逆相关
+
+8.用户手动触发事件传播，不同的触发方式有什么样的区别

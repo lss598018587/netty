@@ -128,6 +128,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private final SelectStrategy selectStrategy;
 
+    //这是 IO 任务的执行时间比例，因为每个线程既有 IO 任务执行，也有非 IO 任务需要执行，所以该参数为了保证有足够时间是给 IO 的。
+    // 这里也不需要急着去理解什么 IO 任务、什么非 IO 任务。
     private volatile int ioRatio = 50;
     private int cancelledKeys;
     private boolean needsToSelectAgain;
@@ -135,6 +137,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     NioEventLoop(NioEventLoopGroup parent, Executor executor, SelectorProvider selectorProvider,
                  SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler,
                  EventLoopTaskQueueFactory queueFactory) {
+
+        // 调用父类构造器
         super(parent, executor, false, newTaskQueue(queueFactory), newTaskQueue(queueFactory),
                 rejectedExecutionHandler);
         if (selectorProvider == null) {
@@ -144,6 +148,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             throw new NullPointerException("selectStrategy");
         }
         provider = selectorProvider;
+        // 开启 NIO 中最重要的组件：Selector
         final SelectorTuple selectorTuple = openSelector();
         selector = selectorTuple.selector;
         unwrappedSelector = selectorTuple.unwrappedSelector;
@@ -451,6 +456,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         for (;;) {
             try {
                 try {
+                    // selectStrategy 终于要派上用场了
+                    // 它有两个值，一个是 CONTINUE 一个是 SELECT
+                    // 针对这块代码，我们分析一下。
+                    // 1. 如果 taskQueue 不为空，也就是 hasTasks() 返回 true，
+                    //         那么执行一次 selectNow()，该方法不会阻塞
+                    // 2. 如果 hasTasks() 返回 false，那么执行 SelectStrategy.SELECT 分支，
+                    //    进行 select(...)，这块是带阻塞的
+                    // 这个很好理解，就是按照是否有任务在排队来决定是否可以进行阻塞
                     switch (selectStrategy.calculateStrategy(selectNowSupplier, hasTasks())) {
                     case SelectStrategy.CONTINUE:
                         continue;

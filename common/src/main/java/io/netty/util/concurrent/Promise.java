@@ -21,6 +21,10 @@ package io.netty.util.concurrent;
 public interface Promise<V> extends Future<V> {
 
     /**
+     *
+     *   标记该 future 成功及设置其执行结果，并且会通知所有的 listeners。
+     *   如果该操作失败，将抛出异常(失败指的是该 future 已经有了结果了，成功的结果，或者失败的结果)
+     *
      * Marks this future as a success and notifies all
      * listeners.
      *
@@ -29,6 +33,8 @@ public interface Promise<V> extends Future<V> {
     Promise<V> setSuccess(V result);
 
     /**
+     * 和 setSuccess 方法一样，只不过如果失败，它不抛异常，返回 false
+     *
      * Marks this future as a success and notifies all
      * listeners.
      *
@@ -39,6 +45,9 @@ public interface Promise<V> extends Future<V> {
     boolean trySuccess(V result);
 
     /**
+     * 标记该 future 失败，及其失败原因。
+     * 如果失败，将抛出异常(失败指的是已经有了结果了)
+     *
      * Marks this future as a failure and notifies all
      * listeners.
      *
@@ -47,6 +56,10 @@ public interface Promise<V> extends Future<V> {
     Promise<V> setFailure(Throwable cause);
 
     /**
+     *
+     * 标记该 future 失败，及其失败原因。
+     * 如果已经有结果，返回 false，不抛出异常
+     *
      * Marks this future as a failure and notifies all
      * listeners.
      *
@@ -57,6 +70,9 @@ public interface Promise<V> extends Future<V> {
     boolean tryFailure(Throwable cause);
 
     /**
+     *
+     * 标记该 future 不可以被取消
+     *
      * Make this future impossible to cancel.
      *
      * @return {@code true} if and only if successfully marked this future as uncancellable or it is already done
@@ -64,6 +80,12 @@ public interface Promise<V> extends Future<V> {
      */
     boolean setUncancellable();
 
+    /**
+     * 这里和 ChannelFuture 一样，对这几个方法进行覆写，目的是为了返回 Promise 类型的实例
+     *
+     * @param listener
+     * @return
+     */
     @Override
     Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener);
 

@@ -1,0 +1,17 @@
+
+NioSocketChannel，由于它充当客户端的功能，它的创建时机在 connect(…) 的时候；
+
+NioServerSocketChannel 来说，它充当服务端功能，它的创建时机在绑定端口 bind(…) 的时候。
+
+
+
+
+
+
+1、在 Netty 中，NioEventLoopGroup 代表线程池，NioEventLoop 就是其中的线程。
+
+2、线程池 NioEventLoopGroup 是池中的线程 NioEventLoop 的 parent，从上面的代码中的取名可以看出。
+
+3、每个 NioEventLoop 都有自己的 Selector，上面的代码也反应了这一点，这和 Tomcat 中的 NIO 模型有点区别。
+
+4、executor、selectStrategy 和 rejectedExecutionHandler 从 NioEventLoopGroup 中一路传到了 NioEventLoop 中。
