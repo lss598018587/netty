@@ -471,7 +471,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     case SelectStrategy.BUSY_WAIT:
                         // fall-through to SELECT since the busy-wait is not supported with NIO
 
+
                     case SelectStrategy.SELECT:
+                        // 如果  hasTasks() 没有任务，就返回-1，那么进到这个 select 分支，这里 select 带阻塞的
                         select(wakenUp.getAndSet(false));
 
                         // 'wakenUp.compareAndSet(false, true)' is always evaluated
