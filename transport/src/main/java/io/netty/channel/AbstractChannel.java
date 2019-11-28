@@ -500,26 +500,32 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
                 boolean firstRegistration = neverRegistered;
                 //类似于nio select的注册一个连接的监听事件
+                // *** 进行 JDK 底层的操作：Channel 注册到 Selector 上 ***
                 doRegister();
                 neverRegistered = false;
                 registered = true;
+                // 到这里，就算是 registered 了
 
-                // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
-                // user may already fire events through the pipeline in the ChannelFutureListener.
+                // 这一步也很关键，因为这涉及到了 ChannelInitializer 的 init(channel)
+                // 我们之前说过，init 方法会将 ChannelInitializer 内部添加的 handlers 添加到 pipeline 中
                 pipeline.invokeHandlerAddedIfNeeded();
 
+                // 设置当前 promise 的状态为 success
+                // 因为当前 register 方法是在 eventLoop 中的线程中执行的，需要通知提交 register 操作的线程
                 safeSetSuccess(promise);
+
+                // 当前的 register 操作已经成功，该事件应该被 pipeline 上
+                // 所有关心 register 事件的 handler 感知到，往 pipeline 中扔一个事件
                 pipeline.fireChannelRegistered();
-                // Only fire a channelActive if the channel has never been registered. This prevents firing
-                // multiple channel actives if the channel is deregistered and re-registered.
+
+                // 这里 active 指的是 channel 已经打开
                 if (isActive()) {
+                    // 如果该 channel 是第一次执行 register，那么 fire ChannelActive 事件
                     if (firstRegistration) {
                         pipeline.fireChannelActive();
                     } else if (config().isAutoRead()) {
-                        // This channel was registered before and autoRead() is set. This means we need to begin read
-                        // again so that we process inbound data.
-                        //
-                        // See https://github.com/netty/netty/issues/4805
+                        // 该 channel 之前已经 register 过了，
+                        // 这里让该 channel 立马去监听通道中的 OP_READ 事件
                         beginRead();
                     }
                 }

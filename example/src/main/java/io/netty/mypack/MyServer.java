@@ -5,6 +5,10 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.mypack.handler.MyByteToLongDecoder2;
+import io.netty.mypack.handler.MyLongToByteEncoder;
+import io.netty.mypack.handler.MyServerHander;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -15,17 +19,20 @@ public class MyServer {
     public static void main(String[] args) {
 
 
-        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         try{
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup,workerGroup)
                     .channel(NioServerSocketChannel.class)
+                    .handler(new MyWmHandler())
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline p = ch.pipeline();
-
+                            p.addLast("t1",new MyByteToLongDecoder2());
+                            p.addLast("t2",new MyLongToByteEncoder());
+                            p.addLast("t3",new MyServerHander());
                         }
                     });
             //sync 等待绑定和初始化注册全部成功 才返回 ChannelFuture 对象

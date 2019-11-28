@@ -460,7 +460,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     // 它有两个值，一个是 CONTINUE 一个是 SELECT
                     // 针对这块代码，我们分析一下。
                     // 1. 如果 taskQueue 不为空，也就是 hasTasks() 返回 true，
-                    //         那么执行一次 selectNow()，该方法不会阻塞
+                    //         那么执行一次 selectNow()，该方法不会阻塞，直到拿到数据走到default
                     // 2. 如果 hasTasks() 返回 false，那么执行 SelectStrategy.SELECT 分支，
                     //    进行 select(...)，这块是带阻塞的
                     // 这个很好理解，就是按照是否有任务在排队来决定是否可以进行阻塞
@@ -520,20 +520,25 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
                 cancelledKeys = 0;
                 needsToSelectAgain = false;
+                // 默认地，ioRatio 的值是 50
                 final int ioRatio = this.ioRatio;
                 if (ioRatio == 100) {
+                    // 如果 ioRatio 设置为 100，那么先执行 IO 操作，然后在 finally 块中执行 taskQueue 中的任务
                     try {
+                        // 1. 执行 IO 操作。因为前面 select 以后，可能有些 channel 是需要处理的。
                         processSelectedKeys();
                     } finally {
-                        // Ensure we always run tasks.
+                        // 2. 执行非 IO 任务，也就是 taskQueue 中的任务
                         runAllTasks();
                     }
                 } else {
+                    // 如果 ioRatio 不是 100，那么根据 IO 操作耗时，限制非 IO 操作耗时
                     final long ioStartTime = System.nanoTime();
                     try {
+                        // 执行 IO 操作
                         processSelectedKeys();
                     } finally {
-                        // Ensure we always run tasks.
+                        // 根据 IO 操作消耗的时间，计算执行非 IO 操作（runAllTasks）可以用多少时间.
                         final long ioTime = System.nanoTime() - ioStartTime;
                         runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                     }
@@ -799,10 +804,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     int selectNow() throws IOException {
         try {
+            //这个方法与select()的区别在于，是非阻塞的，即当前操作即使没有通道准备好也是立即返回。只是返回的是0.
             return selector.selectNow();
         } finally {
             // restore wakeup state if needed
             if (wakenUp.get()) {
+                //wakeup用于唤醒阻塞在select方法上的线程
                 selector.wakeup();
             }
         }
