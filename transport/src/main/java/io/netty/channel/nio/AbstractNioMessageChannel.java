@@ -64,6 +64,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             assert eventLoop().inEventLoop();
             final ChannelConfig config = config();
             final ChannelPipeline pipeline = pipeline();
+            //allocHandle是一个服务器接入速率处理器
             final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
             allocHandle.reset(config);
 
@@ -71,6 +72,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             Throwable exception = null;
             try {
                 try {
+                    //while循环调用doReadMessages()创建新连接对象
                     do {
                         //创建客户端channel
                         int localRead = doReadMessages(readBuf);
@@ -81,25 +83,28 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                             closed = true;
                             break;
                         }
-
+                        //把读到的连接做一个累加totalMessages，默认最多累计读取16个连接，结束循环
                         allocHandle.incMessagesRead(localRead);
                     } while (allocHandle.continueReading());
                 } catch (Throwable t) {
                     exception = t;
                 }
 
+                //触发readBuf容器内所有的传播事件:ChannelRead 读事件
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
                     readPending = false;
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
+                //清空容器
                 readBuf.clear();
                 allocHandle.readComplete();
+                //触发传播事件：ChannelReadComplete，所有的读事件完成
                 pipeline.fireChannelReadComplete();
 
                 if (exception != null) {
                     closed = closeOnReadError(exception);
-
+                    //触发传播事件：exceptionCaught，触发异常
                     pipeline.fireExceptionCaught(exception);
                 }
 

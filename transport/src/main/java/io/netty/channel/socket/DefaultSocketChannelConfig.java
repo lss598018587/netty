@@ -50,8 +50,12 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         this.javaSocket = javaSocket;
 
         // Enable TCP_NODELAY by default if possible.
+        /**
+         * 禁止了tcp的Nagle算法，目的是为了尽量让小的数据包整合成大的发送出去,降低延时。
+         */
         if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
             try {
+                //禁止Nagle算法,目的是为了让小的数据包尽量集合成大的数据包发送出去
                 setTcpNoDelay(true);
             } catch (Exception e) {
                 // Ignore.

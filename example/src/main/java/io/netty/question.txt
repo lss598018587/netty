@@ -21,8 +21,12 @@ new NioEventLoopGroup()【线程组，默认2*cpu】
 
 
 2.netty是如何解决jdk空轮询bug的？
+    netty通过计数的方式，如果阻塞了一个select操作，实际上并没有花这么长时间，那么有可能出发了一次空轮询的bug,默认情况下，这个现象达到512次，
+    则重建一个Selector,把原Selector上面所有的key移交到新的。通过这种方式避免。
 
 3.Netty如何保证异步串行无锁化？
+    在所有外部线程调用NioEventLoop里Channle的方法的时候，通过inEventLoop方法来判断当前线程是本NioEventLoop持有的线程(是否是外部线程)，
+    外部线程的话，则把所有操作封装成一个task,丢到taskQueue里面。而这个队列里的task将会在NioEventLoop执行的第三个阶段runAllTask()中挨个执行，保证串行无锁化。
 
 
 4.Netty是在哪里检测有新连接接入的

@@ -22,7 +22,9 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
-
+    /**
+     * 维持了一个数组，而不是HashSet
+     */
     SelectionKey[] keys;
     int size;
 
@@ -30,6 +32,11 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
         keys = new SelectionKey[1024];
     }
 
+    /**
+     * 改方法直接操作数组，实现时间复杂度为O(1)
+     * @param o
+     * @return
+     */
     @Override
     public boolean add(SelectionKey o) {
         if (o == null) {

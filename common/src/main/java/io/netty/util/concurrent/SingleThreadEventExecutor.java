@@ -375,12 +375,15 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @return {@code true} if and only if at least one task was run
      */
     protected boolean runAllTasks() {
+        //保证当前线程式NioEventLoop持有的线程
         assert inEventLoop();
         boolean fetchedAll;
         boolean ranAtLeastOne = false;
 
         do {
+            //将定时任务队列里的任务全部放到NioEventQueue.taskQueue中
             fetchedAll = fetchFromScheduledTaskQueue();
+            //从taskQueue中取出任务依次执行，直到完成，异常则打日志
             if (runAllTasksFrom(taskQueue)) {
                 ranAtLeastOne = true;
             }
@@ -465,23 +468,31 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
      */
     protected boolean runAllTasks(long timeoutNanos) {
+        //定时任务队列的任务全部挪到NioEventLoop.taskQueue中
         fetchFromScheduledTaskQueue();
+        //从taskQueue中取出任务
         Runnable task = pollTask();
         if (task == null) {
+            //执行tailQueue中的任务
             afterRunningAllTasks();
             return false;
         }
 
+        //计算截止时间
+        //ScheduledFutureTask.nanoTime()：定时任务开始执行到现在的时间
         final long deadline = ScheduledFutureTask.nanoTime() + timeoutNanos;
         long runTasks = 0;
         long lastExecutionTime;
         for (;;) {
+            //执行任务
             safeExecute(task);
 
             runTasks ++;
 
             // Check timeout every 64 tasks because nanoTime() is relatively expensive.
             // XXX: Hard-coded value - will make it configurable if it is really a problem.
+
+            //每64次刷新一次：距离任务开始的时间
             if ((runTasks & 0x3F) == 0) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 if (lastExecutionTime >= deadline) {
@@ -495,7 +506,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 break;
             }
         }
-
+        //执行tailQueue中的任务
         afterRunningAllTasks();
         this.lastExecutionTime = lastExecutionTime;
         return true;
