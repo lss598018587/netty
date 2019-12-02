@@ -110,6 +110,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private AbstractChannelHandlerContext newContext(EventExecutorGroup group, String name, ChannelHandler handler) {
+        //实例化DefaultChannelHandlerContext
         return new DefaultChannelHandlerContext(this, childExecutor(group), name, handler);
     }
 
@@ -121,18 +122,22 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (pinEventExecutor != null && !pinEventExecutor) {
             return group.next();
         }
+        //存储异步线程的容器：管理异步线程
         Map<EventExecutorGroup, EventExecutor> childExecutors = this.childExecutors;
         if (childExecutors == null) {
             // Use size of 4 as most people only use one extra EventExecutor.
+            //新建一个Map存储异步线程
             childExecutors = this.childExecutors = new IdentityHashMap<EventExecutorGroup, EventExecutor>(4);
         }
         // Pin one of the child executors once and remember it so that the same child executor
         // is used to fire events for the same channel.
+        //存储异步线程
         EventExecutor childExecutor = childExecutors.get(group);
         if (childExecutor == null) {
             childExecutor = group.next();
             childExecutors.put(group, childExecutor);
         }
+        //返回异步线程
         return childExecutor;
     }
     @Override
@@ -192,10 +197,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
+            //检查是否重复添加
             checkMultiplicity(handler);
 
+            //group：异步线程
+            //创建数据节点
+            //filterName：从头节点开始遍历检查名字是否重复，如果没有传入name则生成一个name
             newCtx = newContext(group, filterName(name, handler), handler);
-
+            //添加数据节点
             addLast0(newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
@@ -206,13 +215,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 callHandlerCallbackLater(newCtx, true);
                 return this;
             }
-
+            //触发事件回调函数：handlerAdded
             EventExecutor executor = newCtx.executor();
             if (!executor.inEventLoop()) {
                 callHandlerAddedInEventLoop(newCtx, executor);
                 return this;
             }
         }
+        //触发事件回调函数：handlerAdded
         callHandlerAdded0(newCtx);
         return this;
     }
@@ -592,6 +602,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private static void checkMultiplicity(ChannelHandler handler) {
         if (handler instanceof ChannelHandlerAdapter) {
             ChannelHandlerAdapter h = (ChannelHandlerAdapter) handler;
+            //判断是否是共享 同时  是否时被添加过的
             if (!h.isSharable() && h.added) {
                 throw new ChannelPipelineException(
                         h.getClass().getName() +
@@ -603,6 +614,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerAdded0(final AbstractChannelHandlerContext ctx) {
         try {
+            //调用回调函数
             ctx.callHandlerAdded();
         } catch (Throwable t) {
             boolean removed = false;

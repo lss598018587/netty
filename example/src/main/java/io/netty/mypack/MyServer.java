@@ -15,7 +15,7 @@ public class MyServer {
 
 
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup(4);
         try{
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup,workerGroup)

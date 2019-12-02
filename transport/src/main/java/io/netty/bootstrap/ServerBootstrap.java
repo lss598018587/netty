@@ -204,14 +204,20 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @Override
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            //该channel为客户端接入时创建的channel
             final Channel child = (Channel) msg;
+
+            //添加childHandler
 
             child.pipeline().addLast(childHandler);
 
+            //设置TCP相关属性：childOptions
             setChannelOptions(child, childOptions, logger);
+            //设置自定义属性:childAttrs
             setAttributes(child, childAttrs);
 
             try {
+                //选择NioEventLoop并注册Selector
                 childGroup.register(child).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {

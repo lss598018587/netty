@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.nio.NioEventLoop;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.DefaultAttributeMap;
@@ -520,6 +521,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
                 // 这里 active 指的是 channel 已经打开
                 if (isActive()) {
+                    System.out.println("client端的线程"+((NioEventLoop)AbstractChannel.this.eventLoop).getSelector()+"，线程名字："+Thread.currentThread().getName());
                     // 如果该 channel 是第一次执行 register，那么 fire ChannelActive 事件
                     if (firstRegistration) {
                         pipeline.fireChannelActive();

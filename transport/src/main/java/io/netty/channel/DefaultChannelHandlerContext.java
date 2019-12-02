@@ -23,7 +23,9 @@ final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
 
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, EventExecutor executor, String name, ChannelHandler handler) {
+        //标记类型
         super(pipeline, executor, name, handler.getClass());
+        //持有handler
         this.handler = handler;
     }
 

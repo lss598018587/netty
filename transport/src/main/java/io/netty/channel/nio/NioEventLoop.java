@@ -670,6 +670,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private void processSelectedKeysOptimized() {
         //轮询selectedKeys，
         for (int i = 0; i < selectedKeys.size; ++i) {
+            System.out.println("boss 线程的selector:"+this.selector+",线程："+Thread.currentThread().getName());
             final SelectionKey k = selectedKeys.keys[i];
             // null out entry in the array to allow to have it GC'ed once the Channel close
             // See https://github.com/netty/netty/issues/2363
@@ -983,5 +984,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         } catch (Throwable t) {
             logger.warn("Failed to update SelectionKeys.", t);
         }
+    }
+
+    public Selector getSelector(){
+        return this.selector;
     }
 }
